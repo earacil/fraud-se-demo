@@ -1,0 +1,5 @@
+device_id,type,os,browser
+DEV001,iPhone 14,iOS 17,Safari
+DEV002,MacBook Pro,macOS 14,Chrome
+DEV003,Samsung Galaxy S23,Android 13,Chrome
+DEV004,Unknown Android,Android 11,Firefox
