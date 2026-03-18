@@ -1,8 +1,8 @@
 // ================================================================
 // Neo4j FS Fraud Demo — Data Load Script
 // ================================================================
-// Parámetros:
-//   $file_path_root  → URL base (e.g. 'file:///import/' o 'https://raw.githubusercontent.com/...')
+// Parameters:
+//   $file_path_root  → Base URL (e.g. 'file:///import/' or 'https://raw.githubusercontent.com/...')
 //   $file_0  → 'accounts.csv'
 //   $file_1  → 'transactions.csv'
 //   $file_2  → 'phones.csv'
