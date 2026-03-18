@@ -107,18 +107,24 @@ Detectar ciclos es un problema natural en grafos y mucho más complejo de expres
 
 ## BLOQUE 7 — Caso 4: Automated Facial Recognition
 
-**[HERRAMIENTA: Cypher Query]**
+**[HERRAMIENTA: Cypher Query + Vector Similarity + Vector Index]**
 
 **[NARRATIVA]**
 
-"En este caso integramos resultados de sistemas externos de reconocimiento facial. Neo4j no realiza el reconocimiento, sino que conecta estos resultados con el resto del grafo.
+"En el onboarding, el banco captura la biometría facial del cliente y almacena su representación como un vector de alta dimensionalidad —un embedding— en Neo4j, asociado a su cuenta.
 
-Esto permite detectar reutilización de identidades cuando múltiples solicitudes están asociadas al mismo identificador facial."
+Esto habilita dos casos de uso distintos:
 
-**[DEMO — placeholder]**
-> *Query Cypher que enlaza solicitudes de onboarding mediante identificadores faciales compartidos.*
+El primero es verificación de acceso: en cada login, se captura la cara del usuario y se compara mediante similitud coseno contra el embedding registrado para esa cuenta. Alta similitud → acceso permitido. Baja similitud → alerta.
 
-**[PUNTO CLAVE A DESTACAR]:** "El grafo actúa como capa de integración entre sistemas heterogéneos."
+El segundo, y más potente, es detección de fraude en onboarding: antes de crear una cuenta nueva, buscamos en toda la base de datos si ese rostro ya existe asociado a otra identidad. Para esto, Neo4j dispone de un Vector Index que ejecuta búsquedas aproximadas de vecinos más cercanos —ANN— sobre los embeddings, con la misma eficiencia que un índice tradicional pero en espacio vectorial."
+
+**[DEMO]**
+> *Query 1: login legítimo de Elena Navarro → similitud ~99,97% → ACCESO PERMITIDO*
+> *Query 2: impostor intenta acceder a la cuenta de Elena → similitud ~32% → ACCESO DENEGADO*
+> *Query 3: "Pedro García" intenta hacer onboarding → Vector Index encuentra que su cara ya está registrada como Elena Navarro → FRAUDE DETECTADO EN ONBOARDING*
+
+**[PUNTO CLAVE A DESTACAR]:** "El Vector Index permite hacer esto a escala de millones de caras con latencia de milisegundos. Y al vivir en el mismo grafo, la respuesta puede enriquecerse al instante con el historial de transacciones, dispositivos o alertas previas de esa identidad."
 
 ---
 

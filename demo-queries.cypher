@@ -102,26 +102,37 @@ ORDER BY tamaño DESC;
 
 
 // ================================================================
-// CASO 4 — Facial Recognition (NO VALIDO NECESITA USAR VECTOR SEARCH)
+// CASO 4 — Automated Facial Recognition (Cosine Similarity)
 // ================================================================
 
-// Solicitudes de crédito vinculadas al mismo identificador facial
-MATCH (a:Account)-[:APPLIED]->(app:Application)
-WITH app.face_id AS face_id,
-     collect({
-       cuenta:    a.name,
-       id_cuenta: a.a_id,
-       solicitud: app.app_id,
-       importe:   app.amount,
-       producto:  app.product,
-       fecha:     toString(app.date)
-     }) AS solicitudes
-WHERE size(solicitudes) > 1
-RETURN face_id,
-       size(solicitudes)                                            AS num_solicitudes,
-       reduce(t = 0.0, s IN solicitudes | t + s.importe)           AS exposicion_total,
-       solicitudes
-ORDER BY num_solicitudes DESC;
+// Login LEGÍTIMO — la cara capturada en el login es muy similar a la registrada en onboarding
+WITH [0.152, 0.255, 0.254, 0.001, 0.002, 0.252, 0.201, 0.251, 0.255, 0.099, 0.252] AS loginEmbedding
+MATCH (a:Account {a_id: 'ACC012'})-[:HAS_FACE]->(f:Face)
+RETURN a.name  AS cuenta,
+       round(vector.similarity.cosine(f.embedding, loginEmbedding) * 100, 2) AS similitud_pct,
+       CASE WHEN vector.similarity.cosine(f.embedding, loginEmbedding) > 0.98
+            THEN 'ACCESO PERMITIDO' ELSE 'ACCESO DENEGADO' END AS resultado;
+
+// Login FRAUDULENTO — otra persona intenta acceder a la cuenta de Elena Navarro
+WITH [0.810, 0.120, 0.430, 0.650, 0.320, 0.780, 0.210, 0.450, 0.380, 0.720, 0.190] AS loginEmbedding
+MATCH (a:Account {a_id: 'ACC012'})-[:HAS_FACE]->(f:Face)
+RETURN a.name  AS cuenta,
+       round(vector.similarity.cosine(f.embedding, loginEmbedding) * 100, 2) AS similitud_pct,
+       CASE WHEN vector.similarity.cosine(f.embedding, loginEmbedding) > 0.98
+            THEN 'ACCESO PERMITIDO' ELSE 'ACCESO DENEGADO' END AS resultado;
+
+// ONBOARDING FRAUD — ¿esta cara nueva ya está registrada bajo otra identidad?
+// Escenario: "Pedro García" intenta abrir una cuenta, pero su cara ya existe en la DB
+WITH [0.42, 0.78, 0.15, 0.89, 0.56, 0.32, 0.74, 0.18, 0.63, 0.45, 0.87] AS nuevaCaraEmbedding
+CALL db.index.vector.queryNodes('face-embeddings', 3, nuevaCaraEmbedding)
+YIELD node AS cara, score
+MATCH (a:Account)-[:HAS_FACE]->(cara)
+WHERE score > 0.98
+RETURN a.name       AS identidad_registrada,
+       a.a_id       AS cuenta_id,
+       cara.face_id AS face_id_registrado,
+       round(score * 100, 2) AS similitud_pct
+ORDER BY similitud_pct DESC;
 
 
 // ================================================================

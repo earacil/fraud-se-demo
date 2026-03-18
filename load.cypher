@@ -29,10 +29,17 @@
 :param file_9 => 'applications.csv';
 :param file_10 => 'accounts_fraud_ring.csv';
 :param file_11 => 'transactions_fraud_ring.csv';
+:param file_12 => 'account_face.csv';
 :param idsToSkip => [];
 
 // ── Constraints ─────────────────────────────────────────────────
 CREATE CONSTRAINT IF NOT EXISTS FOR (n:Account)     REQUIRE n.a_id       IS UNIQUE;
+CREATE CONSTRAINT IF NOT EXISTS FOR (n:Face)        REQUIRE n.face_id    IS UNIQUE;
+
+// ── Vector Index: Face embeddings (Neo4j 5.11+) ──────────────────
+CREATE VECTOR INDEX `face-embeddings` IF NOT EXISTS
+FOR (f:Face) ON (f.embedding)
+OPTIONS { indexConfig: { `vector.dimensions`: 11, `vector.similarity_function`: 'cosine' } };
 CREATE CONSTRAINT IF NOT EXISTS FOR (n:Transaction) REQUIRE n.tx_id      IS UNIQUE;
 CREATE CONSTRAINT IF NOT EXISTS FOR (n:Phone)       REQUIRE n.phone_id   IS UNIQUE;
 CREATE CONSTRAINT IF NOT EXISTS FOR (n:Address)     REQUIRE n.addr_id    IS UNIQUE;
@@ -225,6 +232,24 @@ CALL (row) {
   SET n.`product` = row.`product`
   SET n.`status`  = row.`status`
   SET n.`face_id` = row.`face_id`
+} IN TRANSACTIONS OF 10000 ROWS;
+
+// ── Node: Face ───────────────────────────────────────────────────
+LOAD CSV WITH HEADERS FROM ($file_path_root + $file_12) AS row
+WITH row
+CALL (row) {
+  MERGE (f:`Face` { `face_id`: row.`face_id` })
+  SET f.`embedding` = [x IN split(row.`embedding`, '|') | toFloat(x)]
+} IN TRANSACTIONS OF 10000 ROWS;
+
+// ── Relationship: Account -[:HAS_FACE]-> Face ───────────────────
+
+LOAD CSV WITH HEADERS FROM ($file_path_root + $file_12) AS row
+WITH row
+CALL (row) {
+  MATCH (a:`Account` { `a_id`:    row.`a_id` })
+  MATCH (f:`Face`    { `face_id`: row.`face_id` })
+  MERGE (a)-[r:`HAS_FACE`]->(f)
 } IN TRANSACTIONS OF 10000 ROWS;
 
 // ── Relationship: Account -[:APPLIED]-> Application ─────────────
