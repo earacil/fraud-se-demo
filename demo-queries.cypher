@@ -80,23 +80,19 @@ MATCH path = (a:Account)<-[:FROM]-(first_tx)
     (last_tx)-[:TO]->(a)
 WHERE COUNT {UNWIND [a] + a_i AS b RETURN DISTINCT b } = size([a] + a_i) // non repeating cycle
 RETURN path
-LIMIT 3
+LIMIT 3;
 
 // [GDS] Proyección de la red de transacciones (Account -> Account)
-CALL gds.graph.project.cypher(
-  'fraud-network',
-  'MATCH (n:Account) RETURN id(n) AS id',
-  'MATCH (a:Account)<-[:FROM]-(:Transaction)-[:TO]->(b:Account)
-   RETURN id(a) AS source, id(b) AS target'
-)
-YIELD graphName, nodeCount, relationshipCount;
+MATCH (a:Account)<-[:FROM]-(:Transaction)-[:TO]->(b:Account)
+WITH gds.graph.project('fraud-network', a, b) AS graph
+RETURN graph.graphName, graph.nodeCount, graph.relationshipCount;
 
 // [GDS] WCC: comunidades de cuentas conectadas por transacciones
 CALL gds.wcc.stream('fraud-network')
 YIELD nodeId, componentId
 WITH componentId,
      collect(gds.util.asNode(nodeId).name) AS miembros
-WHERE size(miembros) > 1
+WHERE size(miembros) > 1 and size(miembros) < 1000
 RETURN componentId, size(miembros) AS tamaño, miembros
 ORDER BY tamaño DESC;
 
@@ -159,6 +155,19 @@ YIELD nodeId, score
 RETURN gds.util.asNode(nodeId).name AS cuenta, round(score, 2) AS centralidad
 ORDER BY centralidad DESC
 LIMIT 10;
+
+// Escribir betweenness en los nodos Account (persiste en Neo4j para consulta)
+CALL gds.betweenness.write('fraud-network', { writeProperty: 'betweenness' })
+YIELD nodePropertiesWritten, writeMilliseconds;
+
+// Verificación visual: subgrafo que fluye A TRAVÉS de los top 3 nodos puente
+// Retorna nodos y relaciones → Neo4j Browser/Bloom renderiza el grafo
+MATCH (puente:Account)
+WHERE puente.betweenness IS NOT NULL
+WITH puente ORDER BY puente.betweenness DESC LIMIT 3
+MATCH path_to = (origen:Account)<-[:FROM]-(t1:Transaction)-[:TO]->(puente)
+MATCH path_from = (puente)<-[:FROM]-(t2:Transaction)-[:TO]->(destino:Account)
+RETURN path_to, path_from;
 
 // Limpiar proyección al finalizar la demo
 CALL gds.graph.drop('fraud-network');
