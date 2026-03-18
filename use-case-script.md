@@ -8,12 +8,13 @@
 
 "El fraude financiero no es un problema de datos, es un problema de *relaciones entre datos*. Un cliente puede parecer legítimo cuando lo analizas de forma aislada, pero en cuanto conectas sus identidades, sus dispositivos, sus transacciones y sus contactos, los patrones emergen inmediatamente.
 
-Las bases de datos relacionales almacenan estas conexiones, pero las calculan cada vez que haces una consulta —con JOINs que se vuelven exponencialmente costosos conforme crece la red. Neo4j *persiste las relaciones* como ciudadanos de primera clase en el grafo. No las calcula, las *navega*."
+Las bases de datos relacionales pueden almacenar estas conexiones, pero deben recomputarlas en cada consulta mediante JOINs, cuyo coste crece rápidamente a medida que aumentan los saltos y la complejidad de las relaciones. Neo4j, en cambio, **materializa las relaciones** y permite navegarlas directamente gracias al principio de *index-free adjacency*."
 
 **[SLIDE / PUNTO DE APOYO: Comparativa JOIN vs Traversal]**
 
-- Tabla con 1M nodos, 5 saltos: SQL → segundos/minutos. Neo4j → milisegundos.
-- "Esto no es marketing, es la naturaleza del índice libre de JOIN (index-free adjacency)."
+- A medida que aumentan los saltos, el coste en SQL crece rápidamente.
+- En Neo4j, el coste es proporcional a las relaciones realmente recorridas.
+- "Esto no es marketing, es la naturaleza del modelo de grafos."
 
 ---
 
@@ -21,13 +22,13 @@ Las bases de datos relacionales almacenan estas conexiones, pero las calculan ca
 
 **[NARRATIVA]**
 
-"Hay tres razones por las que Neo4j domina en casos de fraude financiero:"
+"Hay tres razones por las que Neo4j es ampliamente utilizado en casos de fraude financiero:"
 
-1. **Velocidad de traversal en tiempo real** — Las consultas de fraude son, en esencia, preguntas sobre redes: *¿comparten estos dos clientes un dispositivo? ¿Hay un ciclo de transferencias entre estas cuentas?* Neo4j responde en tiempo real, no en batch.
+1. **Velocidad de traversal en tiempo real o near real-time** — Las consultas de fraude son preguntas sobre redes: *¿comparten estos dos clientes un dispositivo? ¿Hay un ciclo de transferencias entre estas cuentas?* Neo4j permite responder a este tipo de preguntas con baja latencia sobre datos conectados.
 
-2. **Modelo de datos flexible** — Los esquemas de fraude evolucionan constantemente. Un grafo añade nuevos tipos de entidades y relaciones sin migraciones destructivas.
+2. **Modelo de datos flexible** — Los esquemas de fraude evolucionan constantemente. Un grafo permite añadir nuevos tipos de entidades y relaciones sin rediseños complejos.
 
-3. **El contexto es el dato** — Una cuenta nueva, un IBAN único, una dirección válida: todo parece limpio. Pero si ese IBAN aparece en 47 solicitudes de crédito distintas, *el grafo lo ve de inmediato*. Las reglas basadas en tablas, no.
+3. **El contexto es el dato** — Una cuenta puede parecer legítima de forma aislada. Pero si ese IBAN aparece en múltiples solicitudes o conexiones sospechosas, el grafo lo revela fácilmente mediante consultas multi-hop y pattern matching.
 
 **[SLIDE: Modelo de grafo genérico de FS]**
 
@@ -41,7 +42,7 @@ Relaciones: `HAS_ACCOUNT`, `USES_DEVICE`, `MADE_TRANSACTION`, `SHARES_EMAIL`, et
 
 **[NARRATIVA]**
 
-"Vamos a ver cinco casos prácticos. Los primeros dos son más visuales —usaremos Bloom para que veáis cómo un analista sin conocimientos técnicos puede *descubrir* el fraude explorando el grafo. El resto serán queries Cypher que demuestran la potencia analítica directa. Y en el último caso incorporaremos GDS, la librería de Data Science de Neo4j, para llevar la detección al siguiente nivel."
+"Vamos a recorrer cinco casos prácticos. Los primeros son más visuales —usaremos Bloom para explorar el grafo como lo haría un analista. Después veremos queries en Cypher para expresar patrones de fraude directamente, y también utilizaremos GDS para enriquecer el análisis con algoritmos de grafos."
 
 | # | Caso de uso | Herramienta principal |
 |---|---|---|
@@ -59,12 +60,14 @@ Relaciones: `HAS_ACCOUNT`, `USES_DEVICE`, `MADE_TRANSACTION`, `SHARES_EMAIL`, et
 
 **[NARRATIVA]**
 
-"Las identidades sintéticas combinan datos reales (p.ej. un número de seguridad social legítimo) con datos ficticios. Son muy difíciles de detectar registro a registro, pero en un grafo, la compartición anómala de atributos salta a la vista visualmente."
+"Las identidades sintéticas combinan datos reales con datos ficticios. Son difíciles de detectar registro a registro, pero en un grafo, la compartición anómala de atributos se hace visible rápidamente.
+
+Lo que parecen múltiples clientes independientes puede convertirse en una red claramente conectada cuando analizamos relaciones como teléfonos, emails o direcciones."
 
 **[DEMO — placeholder]**
-> *Aquí irá: visualización en Bloom de clústeres de cuentas que comparten email/teléfono/dirección + query Cypher que cuantifica el solapamiento.*
+> *Visualización en Bloom de clústeres de cuentas que comparten email/teléfono/dirección + query Cypher que cuantifica el solapamiento mediante pattern matching.*
 
-**[PUNTO CLAVE A DESTACAR]:** "En segundos, Bloom nos muestra una red donde 12 clientes 'distintos' comparten el mismo número de teléfono. Eso no es coincidencia, es fraude organizado."
+**[PUNTO CLAVE A DESTACAR]:** "El grafo permite identificar patrones de compartición anómala que no son evidentes en modelos tabulares."
 
 ---
 
@@ -74,12 +77,14 @@ Relaciones: `HAS_ACCOUNT`, `USES_DEVICE`, `MADE_TRANSACTION`, `SHARES_EMAIL`, et
 
 **[NARRATIVA]**
 
-"El robo de cuenta ocurre cuando un actor malicioso accede a la cuenta de un usuario legítimo, normalmente desde un dispositivo o IP no reconocidos. El grafo nos permite cruzar dispositivos, IPs y comportamiento temporal en una sola query."
+"El robo de cuenta ocurre cuando un actor accede a una cuenta desde dispositivos o IPs no habituales. Este tipo de análisis requiere correlacionar múltiples entidades: usuario, dispositivo, IP y comportamiento temporal.
+
+Con Cypher podemos expresar este patrón directamente como una query sobre el grafo, incluyendo relaciones y ventanas temporales."
 
 **[DEMO — placeholder]**
-> *Aquí irá: query Cypher que detecta accesos desde nuevos dispositivos/IPs con cambios de credenciales en ventanas temporales cortas.*
+> *Query Cypher que detecta accesos desde nuevos dispositivos/IPs correlacionados con cambios de credenciales en intervalos cortos.*
 
-**[PUNTO CLAVE A DESTACAR]:** "Una query de 10 líneas reemplaza semanas de ingeniería en un sistema de reglas tradicional."
+**[PUNTO CLAVE A DESTACAR]:** "Este tipo de correlación multi-entidad se simplifica significativamente frente a aproximaciones basadas en reglas distribuidas."
 
 ---
 
@@ -89,12 +94,14 @@ Relaciones: `HAS_ACCOUNT`, `USES_DEVICE`, `MADE_TRANSACTION`, `SHARES_EMAIL`, et
 
 **[NARRATIVA]**
 
-"Los anillos de transacciones son patrones donde el dinero circula entre un conjunto cerrado de cuentas para simular actividad legítima o lavar fondos. Detectarlos requiere encontrar ciclos en el grafo, algo que es algorítmicamente trivial con Neo4j."
+"Los anillos de transacciones implican ciclos donde el dinero circula entre cuentas para simular actividad legítima o lavar fondos.
+
+Detectar ciclos es un problema natural en grafos y mucho más complejo de expresar en modelos relacionales. Con Cypher podemos identificar paths y ciclos directamente, y con GDS podemos enriquecer el análisis detectando comunidades."
 
 **[DEMO — placeholder]**
-> *Aquí irá: query Cypher para detección de ciclos dirigidos + algoritmo GDS de detección de comunidades (Weakly Connected Components o Louvain) para identificar grupos sospechosos de cuentas.*
+> *Query Cypher para detección de ciclos dirigidos (path queries) + algoritmo GDS (Weakly Connected Components o Louvain).*
 
-**[PUNTO CLAVE A DESTACAR]:** "GDS nos da no solo los ciclos, sino una puntuación de pertenencia a comunidad que podemos usar como feature en un modelo de ML."
+**[PUNTO CLAVE A DESTACAR]:** "Las métricas de comunidad pueden utilizarse como variables en modelos de machine learning para detección de fraude."
 
 ---
 
@@ -104,12 +111,14 @@ Relaciones: `HAS_ACCOUNT`, `USES_DEVICE`, `MADE_TRANSACTION`, `SHARES_EMAIL`, et
 
 **[NARRATIVA]**
 
-"Este caso muestra cómo Neo4j puede integrarse con sistemas externos de reconocimiento facial. Los vectores de similitud o los identificadores de 'rostro detectado' se almacenan como propiedades o relaciones en el grafo, y se cruzan con identidades conocidas para detectar reutilización fraudulenta de documentos."
+"En este caso integramos resultados de sistemas externos de reconocimiento facial. Neo4j no realiza el reconocimiento, sino que conecta estos resultados con el resto del grafo.
+
+Esto permite detectar reutilización de identidades cuando múltiples solicitudes están asociadas al mismo identificador facial."
 
 **[DEMO — placeholder]**
-> *Aquí irá: query Cypher que enlaza solicitudes de onboarding cuyo hash facial apunta a la misma persona con distintas identidades declaradas.*
+> *Query Cypher que enlaza solicitudes de onboarding mediante identificadores faciales compartidos.*
 
-**[PUNTO CLAVE A DESTACAR]:** "El grafo actúa como el tejido conectivo entre sistemas dispares: el motor de visión artificial, el CRM y el core bancario hablan a través del grafo."
+**[PUNTO CLAVE A DESTACAR]:** "El grafo actúa como capa de integración entre sistemas heterogéneos."
 
 ---
 
@@ -119,12 +128,14 @@ Relaciones: `HAS_ACCOUNT`, `USES_DEVICE`, `MADE_TRANSACTION`, `SHARES_EMAIL`, et
 
 **[NARRATIVA]**
 
-"El análisis de depósitos busca patrones anómalos: importes justo por debajo de umbrales regulatorios (structuring), cuentas que reciben depósitos de muchas fuentes distintas en periodos cortos, o flujos que invierten su dirección de forma sospechosa."
+"El análisis de depósitos busca patrones como structuring, alta dispersión de orígenes o flujos anómalos.
+
+Mediante consultas multi-hop podemos identificar estos patrones, y con algoritmos como PageRank o Betweenness Centrality podemos detectar cuentas que actúan como intermediarios clave en la red financiera."
 
 **[DEMO — placeholder]**
-> *Aquí irá: query Cypher para detección de structuring + algoritmo GDS de PageRank o Betweenness Centrality para identificar cuentas que actúan como hubs en la red de depósitos.*
+> *Query Cypher para detección de structuring + algoritmos GDS para identificar nodos relevantes en la red.*
 
-**[PUNTO CLAVE A DESTACAR]:** "Betweenness Centrality nos dice qué cuentas son 'cuellos de botella' del flujo financiero. En un banco legítimo eso tiene sentido; en un patrón sospechoso, es una señal de alarma crítica."
+**[PUNTO CLAVE A DESTACAR]:** "Estas métricas ayudan a identificar cuentas críticas en posibles esquemas de fraude o lavado de dinero."
 
 ---
 
@@ -132,11 +143,11 @@ Relaciones: `HAS_ACCOUNT`, `USES_DEVICE`, `MADE_TRANSACTION`, `SHARES_EMAIL`, et
 
 **[NARRATIVA]**
 
-"Hemos visto cómo Neo4j permite pasar de datos aislados a inteligencia conectada. Cinco casos de uso, tres herramientas distintas —Bloom para el analista visual, Cypher para el analista de datos, GDS para el data scientist— y un único modelo de grafo que los sustenta a todos.
+"Hemos visto cómo Neo4j permite pasar de datos aislados a análisis basado en contexto. A través de un único modelo de grafo, distintos perfiles —analistas, data engineers y data scientists— pueden trabajar sobre el mismo conjunto de datos conectados.
 
-El fraude financiero es, fundamentalmente, un problema de grafos. Neo4j es, fundamentalmente, una base de datos de grafos. No es casualidad que los mayores bancos del mundo lo usen como motor de detección de fraude en tiempo real."
+El fraude financiero es, en gran medida, un problema de relaciones. Los grafos proporcionan una forma natural de modelar y analizar esas relaciones."
 
 **[CIERRE / CALL TO ACTION]**
-- *¿Qué parte queréis profundizar?*
-- *¿Tenéis un caso de uso específico en mente?*
-- *Próximo paso: sandbox / POC con vuestros datos.*
+- *¿Qué caso de uso os resulta más relevante?*
+- *¿Queréis ver cómo aplicar esto sobre vuestros datos?*
+- *Siguiente paso: sandbox o POC.*
