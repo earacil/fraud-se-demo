@@ -107,24 +107,27 @@ Detectar ciclos es un problema natural en grafos y mucho más complejo de expres
 
 ## BLOQUE 7 — Caso 4: Automated Facial Recognition
 
-**[HERRAMIENTA: Cypher Query + Vector Similarity + Vector Index]**
+**[HERRAMIENTA: Cypher Query + Vector Index + GraphRAG]**
 
 **[NARRATIVA]**
 
 "En el onboarding, el banco captura la biometría facial del cliente y almacena su representación como un vector de alta dimensionalidad —un embedding— en Neo4j, asociado a su cuenta.
 
-Esto habilita dos casos de uso distintos:
+Esto habilita tres niveles de análisis progresivos:
 
 El primero es verificación de acceso: en cada login, se captura la cara del usuario y se compara mediante similitud coseno contra el embedding registrado para esa cuenta. Alta similitud → acceso permitido. Baja similitud → alerta.
 
-El segundo, y más potente, es detección de fraude en onboarding: antes de crear una cuenta nueva, buscamos en toda la base de datos si ese rostro ya existe asociado a otra identidad. Para esto, Neo4j dispone de un Vector Index que ejecuta búsquedas aproximadas de vecinos más cercanos —ANN— sobre los embeddings, con la misma eficiencia que un índice tradicional pero en espacio vectorial."
+El segundo es detección de fraude en onboarding: antes de crear una cuenta nueva, buscamos en toda la base de datos si ese rostro ya existe asociado a otra identidad. Para esto, Neo4j dispone de un Vector Index que ejecuta búsquedas ANN —aproximadas de vecinos más cercanos— sobre los embeddings con latencias bajas incluso a gran escala.
+
+El tercero es GraphRAG: una vez que el Vector Index identifica posibles coincidencias, el grafo entra en juego. En un flujo integrado combinamos la recuperación vectorial con un traversal de grafo que recoge todo el contexto conectado —accesos, dispositivos, países, transacciones, solicitudes— y lo estructura como contexto listo para ser consumido por un LLM. El LLM recibe datos precisos y contextualizados; el grafo garantiza que ese contexto es completo y coherente."
 
 **[DEMO]**
-> *Query 1: login legítimo de Elena Navarro → similitud ~99,97% → ACCESO PERMITIDO*
-> *Query 2: impostor intenta acceder a la cuenta de Elena → similitud ~32% → ACCESO DENEGADO*
-> *Query 3: "Pedro García" intenta hacer onboarding → Vector Index encuentra que su cara ya está registrada como Elena Navarro → FRAUDE DETECTADO EN ONBOARDING*
+> *Query 1: login legítimo → alta similitud → ACCESO PERMITIDO*
+> *Query 2: impostor → baja similitud → ACCESO DENEGADO*
+> *Query 3: "Pedro García" intenta hacer onboarding → Vector Index detecta que su cara ya existe en la DB bajo otra identidad*
+> *Query 4 (GraphRAG): misma búsqueda vectorial + traversal de grafo → devuelve risk_context estructurado para un LLM*
 
-**[PUNTO CLAVE A DESTACAR]:** "El Vector Index permite hacer esto a escala de millones de caras con latencia de milisegundos. Y al vivir en el mismo grafo, la respuesta puede enriquecerse al instante con el historial de transacciones, dispositivos o alertas previas de esa identidad."
+**[PUNTO CLAVE A DESTACAR]:** "El Vector Index recupera. El grafo contextualiza. El LLM razona. Neo4j permite unificar estas tres capas en un único modelo de datos para casos de fraude."
 
 ---
 
