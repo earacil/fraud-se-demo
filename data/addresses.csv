@@ -1,4 +1,4 @@
-addr_id,street,city,country
-ADDR001,Calle Falsa 123,Madrid,Spain
-ADDR002,Gran Vía 45,Madrid,Spain
-ADDR003,Paseo de Gracia 88,Barcelona,Spain
+addr_id,street,city,country,latitude,longitude
+ADDR001,Calle Falsa 123,Madrid,Spain,40.4153,-3.7098
+ADDR002,Gran Vía 45,Madrid,Spain,40.4201,-3.7022
+ADDR003,Paseo de Gracia 88,Barcelona,Spain,41.3918,2.1651

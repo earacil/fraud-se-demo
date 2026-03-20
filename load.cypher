@@ -140,9 +140,10 @@ WITH row
 WHERE NOT row.`addr_id` IN $idsToSkip AND NOT row.`addr_id` IS NULL
 CALL (row) {
   MERGE (n:`Address` { `addr_id`: row.`addr_id` })
-  SET n.`street`  = row.`street`
-  SET n.`city`    = row.`city`
-  SET n.`country` = row.`country`
+  SET n.`street`   = row.`street`
+  SET n.`city`     = row.`city`
+  SET n.`country`  = row.`country`
+  SET n.`location` = point({ latitude: toFloat(row.`latitude`), longitude: toFloat(row.`longitude`) })
 } IN TRANSACTIONS OF 10000 ROWS;
 
 // ── Relationship: Account -[:HAS_PHONE]-> Phone ──────────────────
@@ -183,6 +184,7 @@ CALL (row) {
   SET n.`ip_address` = row.`ip_address`
   SET n.`country`    = row.`country`
   SET n.`city`       = row.`city`
+  SET n.`location`   = point({ latitude: toFloat(row.`latitude`), longitude: toFloat(row.`longitude`) })
 } IN TRANSACTIONS OF 10000 ROWS;
 
 // ── Node: LoginEvent ─────────────────────────────────────────────

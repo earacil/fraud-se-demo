@@ -1,6 +1,6 @@
-ip_id,ip_address,country,city
-IP001,81.47.12.33,Spain,Madrid
-IP002,81.47.15.21,Spain,Madrid
-IP003,81.47.18.99,Spain,Valencia
-IP004,197.210.84.11,Nigeria,Lagos
-IP005,41.203.12.45,Nigeria,Abuja
+ip_id,ip_address,country,city,latitude,longitude
+IP001,81.47.12.33,Spain,Madrid,40.4168,-3.7038
+IP002,81.47.15.21,Spain,Madrid,40.4168,-3.7038
+IP003,81.47.18.99,Spain,Valencia,39.4699,-0.3763
+IP004,197.210.84.11,Nigeria,Lagos,6.5244,3.3792
+IP005,41.203.12.45,Nigeria,Abuja,9.0579,7.4951
