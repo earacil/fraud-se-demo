@@ -40,7 +40,7 @@ CREATE CONSTRAINT IF NOT EXISTS FOR (n:Face)        REQUIRE n.face_id    IS UNIQ
 // ── Vector Index: Face embeddings (Neo4j 5.11+) ──────────────────
 CREATE VECTOR INDEX `face-embeddings` IF NOT EXISTS
 FOR (f:Face) ON (f.embedding)
-OPTIONS { indexConfig: { `vector.dimensions`: 11, `vector.similarity_function`: 'cosine' } };
+OPTIONS { indexConfig: { `vector.dimensions`: 512, `vector.similarity_function`: 'cosine' } };
 CREATE CONSTRAINT IF NOT EXISTS FOR (n:Transaction) REQUIRE n.tx_id      IS UNIQUE;
 CREATE CONSTRAINT IF NOT EXISTS FOR (n:Phone)       REQUIRE n.phone_id   IS UNIQUE;
 CREATE CONSTRAINT IF NOT EXISTS FOR (n:Address)     REQUIRE n.addr_id    IS UNIQUE;
